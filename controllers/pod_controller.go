@@ -49,6 +49,22 @@ func NewPodReconciler(p PodReconcilerParams) *PodReconciler {
 // the Pod object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
+
+// Pod Addition/Creation
+//1. Check if pod has inject annotation. Record the annValue.
+//2. Check if pod is in running state
+//3. Query OpenTelemetry CRO with the namespace/name equal to annValue.
+//4. Get the spec.ConfigMap name of opsramp agent configmap. Currently hard code.
+//5. Query the configMap from the 4th step and unmarshal the yaml. Name it as Target Config Map.
+//6. Read the Receiver, Exporters, Processors from CRO spec section and add suffix pod name to each rx, px, ex and then add it to target config map.
+//7. Update configmap
+//8. Maintain a cache of all the pod name to configMap that we have taken action.
+
+// Pod Deletion
+//1. Check if the pod deleted and if it is in the cache and get the corresponding configMap name from cache.
+//2. Query ConfigMap, remove all the rx, px, ex data related to this pod.
+//3. update configmap.
+
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithValues("opentelemetrypodcontroller", req.NamespacedName)
 
