@@ -154,33 +154,34 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 
 				if otCollectorCro.Spec.Config.Receivers.Object != nil {
-					// Marshal the Receivers object to JSON
-					receiversJSON, err := json.Marshal(otCollectorCro.Spec.Config.Receivers.Object)
-					if err != nil {
-						log.Error(err, "failed to marshal receivers object to JSON")
-						return ctrl.Result{}, err
+
+					if receivers, ok := targetConfigMap["receivers"].(map[interface{}]interface{}); ok {
+
+						// Iterate over each receiver and update the target ConfigMap
+						for key, value := range otCollectorCro.Spec.Config.Receivers.Object {
+
+							receiversYaml, err := yaml.Marshal(value)
+							if err != nil {
+								log.Error(err, "failed to marshal receivers object to JSON")
+								return ctrl.Result{}, err
+							}
+
+							newKey := fmt.Sprintf("%s/%s", key, pod.Status.PodIP)
+							receivers[newKey] = fmt.Sprintf("%v", string(receiversYaml))
+							log.Info(fmt.Sprintf("Updated target ConfigMap with key '%s'", newKey))
+						}
+						targetConfigMap["receivers"] = receivers
+					} else {
+						log.Error(fmt.Errorf("receivers section not found in config.yaml"), "Failed to find receivers section in config.yaml")
+						return ctrl.Result{}, nil
 					}
 
-					// Unmarshal JSON into a map[string]interface{} for easier manipulation
-					var receiversMap map[string]interface{}
-					err = json.Unmarshal(receiversJSON, &receiversMap)
-					if err != nil {
-						log.Error(err, "failed to unmarshal JSON to receivers map")
-						return ctrl.Result{}, err
-					}
-
-					// Iterate over each receiver and update the target ConfigMap
-					for key, value := range receiversMap {
-						newKey := fmt.Sprintf("%s/%s", key, pod.Status.PodIP)
-						targetConfigMap[newKey] = fmt.Sprintf("%v", value)
-						log.Info(fmt.Sprintf("Updated target ConfigMap with key '%s'", newKey))
-					}
 				} else {
 					log.Info("There is no Receiver section exists")
 				}
 
 				// Processor Section Update
-				if otCollectorCro.Spec.Config.Processors.Object != nil {
+				if otCollectorCro.Spec.Config.Processors != nil && otCollectorCro.Spec.Config.Processors.Object != nil {
 					// Marshal the Processors object to JSON
 					processorJSON, err := json.Marshal(otCollectorCro.Spec.Config.Processors.Object)
 					if err != nil {
