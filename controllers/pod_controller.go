@@ -141,8 +141,8 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				//6. Read the Receiver, Exporters, Processors from CRO spec section and
 				// add suffix pod name to each rx, px, ex and then add it to target config map.
 
-				var instance v1beta1.OpenTelemetryCollector
-				if err := r.Get(ctx, req.NamespacedName, &instance); err != nil {
+				var otCollectorCro v1beta1.OpenTelemetryCollector
+				if err := r.Get(ctx, client.ObjectKey{Namespace: croNamespace, Name: croName}, &otCollectorCro); err != nil {
 					if !apierrors.IsNotFound(err) {
 						log.Error(err, "unable to fetch OpenTelemetryCollector")
 					}
@@ -153,9 +153,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 					return ctrl.Result{}, client.IgnoreNotFound(err)
 				}
 
-				if instance.Spec.Config.Receivers.Object != nil {
+				if otCollectorCro.Spec.Config.Receivers.Object != nil {
 					// Marshal the Receivers object to JSON
-					receiversJSON, err := json.Marshal(instance.Spec.Config.Receivers.Object)
+					receiversJSON, err := json.Marshal(otCollectorCro.Spec.Config.Receivers.Object)
 					if err != nil {
 						log.Error(err, "failed to marshal receivers object to JSON")
 						return ctrl.Result{}, err
@@ -180,9 +180,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 
 				// Processor Section Update
-				if instance.Spec.Config.Processors.Object != nil {
+				if otCollectorCro.Spec.Config.Processors.Object != nil {
 					// Marshal the Processors object to JSON
-					processorJSON, err := json.Marshal(instance.Spec.Config.Processors.Object)
+					processorJSON, err := json.Marshal(otCollectorCro.Spec.Config.Processors.Object)
 					if err != nil {
 						log.Error(err, "failed to marshal processor object to JSON")
 						return ctrl.Result{}, err
@@ -207,9 +207,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 
 				// Exporter Section Update
-				if instance.Spec.Config.Exporters.Object != nil {
+				if otCollectorCro.Spec.Config.Exporters.Object != nil {
 					// Marshal the Exporter object to JSON
-					exporterJSON, err := json.Marshal(instance.Spec.Config.Exporters.Object)
+					exporterJSON, err := json.Marshal(otCollectorCro.Spec.Config.Exporters.Object)
 					if err != nil {
 						log.Error(err, "failed to marshal exporters object to JSON")
 						return ctrl.Result{}, err
